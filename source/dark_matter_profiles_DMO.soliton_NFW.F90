@@ -222,6 +222,7 @@ contains
   end function solitonNFWGet
 
   subroutine solitonNFWComputeProperties(self,node,radiusVirial,radiusScale,radiusCore,radiusSoliton,densityCore,densityScale,massHaloMinimum0,massCore)
+    use :: Display                         , only : displayMessage           , verbosityLevelSilent
     use :: Galacticus_Nodes                , only : treeNode           , nodeComponentBasic       , nodeComponentDarkMatterProfile
     use :: Numerical_Constants_Math        , only : Pi
     use :: Numerical_Constants_Units       , only : electronVolt
@@ -229,6 +230,9 @@ contains
     use :: Numerical_Constants_Physical    , only : speedLight         , plancksConstant
     use :: Numerical_Constants_Prefixes    , only : kilo
     use :: Cosmology_Parameters            , only : hubbleUnitsStandard, hubbleUnitsLittleH
+    use :: Error                           , only : Error_Report       , errorStatusSuccess       , GSL_Error_Details
+    use :: String_Handling                 , only : operator(//)
+    use :: Functions_Global                , only : State_Store_       , mergerTreeStateStore_    , State_Set_
     use :: Root_Finder                     , only : rootFinder         , rangeExpandMultiplicative, rangeExpandSignExpectPositive , rangeExpandSignExpectNegative
     implicit none
     class           (darkMatterProfileDMOSolitonNFW), intent(inout) :: self
@@ -252,6 +256,11 @@ contains
          &                                                             hubbleConstant                     , hubbleConstantLittle       , &
          &                                                             OmegaMatter                        , densityMatter              , &
          &                                                             zeta_0                             , zeta_z
+    integer                                                         :: status                             , line
+    type            (varying_string               ), save           :: message                            , reason                     , &
+         &                                                             file
+    !$omp threadprivate(message,reason,file)
+    character       (len=16                       )                 :: label
     
     ! Get required components.
     basic             => node%basic            ()
@@ -321,8 +330,8 @@ contains
             &            toleranceRelative=toleranceRelative     &
             &           )
        call finder%rangeExpand(                                                              &
-            &                  rangeExpandUpward            = 2.0d0             , &
-            &                  rangeExpandDownward          = 0.5d0                  , &
+            &                  rangeExpandUpward            = 1.0d0*radiusCore             , &
+            &                  rangeExpandDownward          = 1.0d1*radiusCore             , &
             &                  rangeDownwardLimit           = 1.0d0*radiusCore             , &
             &                  rangeUpwardLimit             = 1.0d1*radiusCore             , &
             &                  rangeExpandDownwardSignExpect= rangeExpandSignExpectPositive, &
@@ -335,7 +344,65 @@ contains
     radiusScale_ =radiusScale
     densityScale_=densityScale
     densityCore_ =densityCore
-    radiusSoliton=finder%find(rootGuess=2.0d0*radiusCore)    
+    radiusSoliton=finder%find(rootGuess=2.0d0*radiusCore, status=status)
+
+    if (status /= errorStatusSuccess) then
+       message = 'radiusSoliton root guess and value = '
+       write(label, '(e12.6)') 2.0d0 * radiusCore
+       message = message // trim(adjustl(label)) // ' / '
+       write(label, '(e12.6)') radiusTransitionRoot(2.0d0 * radiusCore)
+       message = message // trim(adjustl(label))
+       call displayMessage(message, verbosityLevelSilent)
+       call State_Store_(message)
+
+       message = 'bracket region:'
+       write(label, '(e12.6)') radiusCore
+       message = message // 'r_lo = ' // trim(adjustl(label)) // ' / '
+       write(label, '(e12.6)') radiusTransitionRoot(radiusCore)
+       message = message // 'f(r_lo) = ' // trim(adjustl(label)) // ' / '
+       write(label, '(e12.6)') 10.0d0 * radiusCore
+       message = message // 'r_hi = ' // trim(adjustl(label)) // ' / '
+       write(label, '(e12.6)') radiusTransitionRoot(10.0d0 * radiusCore)
+       message = message // 'f(r_hi) = ' // trim(adjustl(label))
+       print*, 'r_hi value = ', 10.0d0 * radiusCore
+       print*, 'f(r_hi) = ', radiusTransitionRoot(10.0d0 * radiusCore)
+       call displayMessage(message, verbosityLevelSilent)
+       call State_Store_(message)
+
+       message = 'densityScale / densityCore = '
+       write(label, '(e12.6)') densityScale
+       message = message // trim(adjustl(label)) // ' / '
+       write(label, '(e12.6)') densityCore
+       message = message // trim(adjustl(label))
+       call displayMessage(message, verbosityLevelSilent)
+       call State_Store_(message)
+
+       message = 'massHalo / redshift / particleMass = '
+       write(label, '(e12.6)') massHalo
+       message = message // trim(adjustl(label)) // ' / '
+       write(label, '(e12.6)') redshift
+       message = message // trim(adjustl(label)) // ' / '
+       write(label, '(e12.6)') self%massParticle
+       message = message // trim(adjustl(label))
+       call displayMessage(message, verbosityLevelSilent)
+       call State_Store_(message)
+
+       select case (status)
+       case (errorStatusOutOfRange)
+           call displayMessage('could not bracket the root for radiusSoliton', verbosityLevelSilent)
+           call node%serializeASCII()
+       case default
+           call GSL_Error_Details(reason, file, line, status)
+           call displayMessage(var_str('GSL error ')//status//': "'//reason//'" at line '//line//' of file "'//file//'"', verbosityLevelSilent)
+       end select
+
+       message="save state due to failure of radiusSoliton solver"
+       call State_Set_           (var_str('debugState'))
+       call State_Store_         (message)
+       call mergerTreeStateStore_(node%hostTree, 'storedTree.dat')
+       call Error_Report('root finding for radiusSoliton failed')
+    end if
+
     return
   end subroutine solitonNFWComputeProperties
 
