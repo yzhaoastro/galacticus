@@ -57,6 +57,7 @@ contains
     type (nodeOperatorTidalMassLossSoliton )                :: self
     type (inputParameters                  ), intent(inout) :: parameters
 
+    self=nodeOperatorTidalMassLossSoliton()
     !![
     <inputParametersValidate source="parameters"/>
     !!]
