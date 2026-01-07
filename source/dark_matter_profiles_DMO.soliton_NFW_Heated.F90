@@ -339,11 +339,11 @@ contains
     use :: Galactic_Structure_Options, only : componentTypeDarkHalo           , massTypeDark                          , weightByMass
     use :: Mass_Distributions        , only : massDistributionSolitonNFWHeated, kinematicsDistributionSolitonNFWHeated, &
          &                                    kinematicsDistributionClass, massDistributionSpherical, massDistributionNFW, &
-         &                                    kinematicsDistributionHeated, massDistributionSphericalHeated, massDistributionHeatingClass
+         &                                    kinematicsDistributionHeated, massDistributionSphericalHeated, massDistributionHeatingClass, kinematicsDistributionNFW
     implicit none
     class           (darkMatterProfileDMOSolitonNFWHeated), intent(inout)           :: self
     class           (massDistributionClass               ), pointer                 :: massDistribution_
-    class           (kinematicsDistributionClass         ), pointer                 :: kinematicsDistribution_
+    class           (kinematicsDistributionClass         ), pointer                 :: kinematicsDistribution_, kinematicsDistributionNFW_
     class           (massDistributionClass               ), pointer                 :: massDistributionNFW_
     class           (massDistributionHeatingClass        ), pointer                 :: massDistributionHeating_
     type            (treeNode                            ), intent(inout)           :: node
@@ -403,6 +403,23 @@ contains
 	  </referenceConstruct>
           !!]
        end select
+       allocate(kinematicsDistributionNFW :: kinematicsDistributionNFW_)
+       select type(kinematicsDistributionNFW_)
+       type is (kinematicsDistributionNFW)
+          !![
+	  <referenceConstruct object="kinematicsDistributionNFW_">
+	    <constructor>
+              kinematicsDistributionNFW(                                                                 &amp;
+	      &amp;                    useSeriesApproximation=.true. &amp;
+	      &amp;                   )
+	    </constructor>
+	  </referenceConstruct>
+          !!]
+       end select
+       call massDistributionNFW_%setKinematicsDistribution(kinematicsDistributionNFW_)
+       !![
+       <objectDestructor name="kinematicsDistributionNFW_"/>
+       !!]
 
        allocate(massDistributionSphericalHeated :: massDistribution_)
        allocate(kinematicsDistributionHeated :: kinematicsDistribution_)
