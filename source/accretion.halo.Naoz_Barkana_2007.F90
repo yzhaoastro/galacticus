@@ -24,6 +24,7 @@
   calculated from an equation from \cite{naoz_formation_2007}.
   !!}
   
+  use :: Dark_Matter_Profiles_DMO             , only : darkMatterProfileDMOClass
   use :: Intergalactic_Medium_Filtering_Masses, only : intergalacticMediumFilteringMass, intergalacticMediumFilteringMassClass
   use :: Virial_Density_Contrast              , only : virialDensityContrastClass
 
@@ -72,6 +73,7 @@
      logical                                                          :: filteredFractionRateComputed               , filteredFractionComputed, &
           &                                                              rateCorrectionComputed
      integer         (kind=kind_int8                       )          :: lastUniqueID
+     class           (darkMatterProfileDMOClass            ), pointer :: darkMatterProfileDMO_             => null()
      class           (intergalacticMediumFilteringMassClass), pointer :: intergalacticMediumFilteringMass_ => null()
      class           (virialDensityContrastClass           ), pointer :: virialDensityContrast_            => null()
    contains
@@ -122,9 +124,9 @@ contains
     !!}
     use :: Input_Parameters, only : inputParameter, inputParameters
     implicit none
-    type(accretionHaloNaozBarkana2007)                :: self
-    type(inputParameters             ), intent(inout) :: parameters
- 
+    type (accretionHaloNaozBarkana2007)                :: self
+    type (inputParameters             ), intent(inout) :: parameters
+
     self%accretionHaloSimple=accretionHaloSimple(parameters)
     !![
     <inputParameter>
@@ -141,6 +143,7 @@ contains
       <source>parameters</source>
       <variable>self%massMinimum</variable>
     </inputParameter>
+    <objectBuilder class="darkMatterProfileDMO"             name="self%darkMatterProfileDMO_"             source="parameters"/>
     <objectBuilder class="intergalacticMediumFilteringMass" name="self%intergalacticMediumFilteringMass_" source="parameters"/>
     <objectBuilder class="virialDensityContrast"            name="self%virialDensityContrast_"            source="parameters"/>
     <inputParametersValidate source="parameters"/>
@@ -149,7 +152,7 @@ contains
     return
   end function naozBarkana2007ConstructorParameters
 
-  function naozBarkana2007ConstructorInternal(timeReionization,velocitySuppressionReionization,accretionNegativeAllowed,accretionNewGrowthOnly,rateAdjust,massMinimum,cosmologyParameters_,cosmologyFunctions_,darkMatterHaloScale_,accretionHaloTotal_,chemicalState_,intergalacticMediumState_,intergalacticMediumFilteringMass_,virialDensityContrast_) result(self)
+  function naozBarkana2007ConstructorInternal(timeReionization,velocitySuppressionReionization,accretionNegativeAllowed,accretionNewGrowthOnly,rateAdjust,massMinimum,cosmologyParameters_,cosmologyFunctions_,darkMatterHaloScale_,darkMatterProfileDMO_,accretionHaloTotal_,chemicalState_,intergalacticMediumState_,intergalacticMediumFilteringMass_,virialDensityContrast_) result(self)
     !!{
     Internal constructor for the \refClass{accretionHaloNaozBarkana2007} halo accretion class.
     !!}
@@ -164,12 +167,13 @@ contains
     class           (cosmologyFunctionsClass              ), intent(in   ), target :: cosmologyFunctions_
     class           (accretionHaloTotalClass              ), intent(in   ), target :: accretionHaloTotal_
     class           (darkMatterHaloScaleClass             ), intent(in   ), target :: darkMatterHaloScale_
+    class           (darkMatterProfileDMOClass            ), intent(in   ), target :: darkMatterProfileDMO_
     class           (chemicalStateClass                   ), intent(in   ), target :: chemicalState_
     class           (intergalacticMediumStateClass        ), intent(in   ), target :: intergalacticMediumState_
     class           (intergalacticMediumFilteringMassClass), intent(in   ), target :: intergalacticMediumFilteringMass_
     class           (virialDensityContrastClass           ), intent(in   ), target :: virialDensityContrast_
     !![
-    <constructorAssign variables="rateAdjust, massMinimum, *intergalacticMediumFilteringMass_, *virialDensityContrast_"/>
+    <constructorAssign variables="rateAdjust, massMinimum, *intergalacticMediumFilteringMass_, *virialDensityContrast_, *darkMatterProfileDMO_"/>
     !!]
 
     self%accretionHaloSimple=accretionHaloSimple(timeReionization,velocitySuppressionReionization,accretionNegativeAllowed,accretionNewGrowthOnly,cosmologyParameters_,cosmologyFunctions_,darkMatterHaloScale_,accretionHaloTotal_,chemicalState_,intergalacticMediumState_)
@@ -215,6 +219,7 @@ contains
     !![
     <objectDestructor name="self%intergalacticMediumFilteringMass_"/>
     <objectDestructor name="self%virialDensityContrast_"           />
+    <objectDestructor name="self%darkMatterProfileDMO_"            />
     !!]
     return
   end subroutine naozBarkana2007Destructor
@@ -293,7 +298,8 @@ contains
             &                                                                                                             densityContrastVirial   , &
             &                                                                                cosmologyParameters_  =self %cosmologyParameters_    , &
             &                                                                                cosmologyFunctions_   =self %cosmologyFunctions_     , &
-            &                                                                                virialDensityContrast_=self %virialDensityContrast_    &
+            &                                                                                virialDensityContrast_=self %virialDensityContrast_  , &
+            &                                                                                darkMatterProfileDMO_ =self %darkMatterProfileDMO_     &
             &                                                                               )
        self%filteredFractionStored   =  self%filteredFractionCompute(massHalo,massFiltering)
        self%filteredFractionComputed =  .true.
@@ -330,7 +336,8 @@ contains
             &                                                                                             densityContrastVirial   , &
             &                                                                cosmologyParameters_  =self %cosmologyParameters_    , &
             &                                                                cosmologyFunctions_   =self %cosmologyFunctions_     , &
-            &                                                                virialDensityContrast_=self %virialDensityContrast_    &
+            &                                                                virialDensityContrast_=self %virialDensityContrast_  , &
+            &                                                                darkMatterProfileDMO_ =self %darkMatterProfileDMO_     &
             &                                                               )
        if (.not.self%filteredFractionComputed) then
           self%filteredFractionStored   =  self%filteredFractionCompute(massHalo,massFiltering)
