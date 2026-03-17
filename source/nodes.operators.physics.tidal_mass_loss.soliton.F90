@@ -152,6 +152,9 @@ contains
     massHost           =  max(0.0d0,massDistribution_%massEnclosedBySphere     (     radius       ))
     massCore           =            darkMatterProfile%floatRank0MetaPropertyGet(self%   massCoreID)
     densityCore        =            darkMatterProfile%floatRank0MetaPropertyGet(self%densityCoreID)
+
+    if ( massCore <= 0.0d0 .or. densityCore <= 0.0d0 ) return
+
     densityHost        =  +3.0d0       &
          &                /4.0d0       &
          &                /Pi          &

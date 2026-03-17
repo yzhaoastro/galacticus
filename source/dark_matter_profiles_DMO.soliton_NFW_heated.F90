@@ -552,8 +552,6 @@ contains
     darkMatterProfile => node%darkMatterProfile()
     call darkMatterProfile%floatRank0MetaPropertySet(self%radiusSolitonID,-1.0d0)
     call darkMatterProfile%floatRank0MetaPropertySet(self%massCoreID     ,-1.0d0)
-    call darkMatterProfile%floatRank0MetaPropertySet(self%radiusCoreID   ,-1.0d0)
-    call darkMatterProfile%floatRank0MetaPropertySet(self%densityCoreID  ,-1.0d0)
     ! Extract basic properties of the node.
     expansionFactor=+self             %cosmologyFunctions_% expansionFactor            (basic%time           ())
     redshift       =+self             %cosmologyFunctions_ %redshiftFromExpansionFactor(      expansionFactor  )
@@ -607,10 +605,8 @@ contains
           call Error_Report('expected a spherical mass distribution'//{introspection:location})
        end select
     end select
-
     ! Compute the core mass.
     massCoreNormal =+darkMatterProfile%floatRank0MetaPropertyGet(self%massCoreNormalID)
-
     ! Solve for the soliton radius.
     self_ => self
     if (.not.finderInitialized) then

@@ -316,6 +316,9 @@ contains
     massCoreNormalSatellite= darkMatterProfile    %floatRank0MetaPropertyGet(self_%massCoreNormalID)
     massCoreHost           = darkMatterProfileHost%floatRank0MetaPropertyGet(self_%massCoreID      )
     massCoreSatellite      = darkMatterProfile    %floatRank0MetaPropertyGet(self_%massCoreID      )
+
+    if (massCoreHost <= 0.0d0 .and. massCoreSatellite <= 0.0d0) return
+
     call darkMatterProfileHost%floatRank0MetaPropertySet(                                                                    &
          &                                                self_%massCoreNormalID                                           , &
          &                                               +fractionMassRetained*(massCoreNormalHost+massCoreNormalSatellite)  &
