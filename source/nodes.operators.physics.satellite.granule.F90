@@ -31,18 +31,20 @@
   !!]
   type, extends(nodeOperatorClass) :: nodeOperatorSatelliteGranule
      private
-     double precision                                        :: massParticle
-     class           (darkMatterParticleClass     ), pointer :: darkMatterParticle_                => null()
-     class           (darkMatterProfileDMOClass), pointer     :: darkMatterProfileDMO_       => null()
-     integer :: axnCoreID, aynCoreID, aznCoreID, axnOuterID, aynOuterID, aznOuterID
-     integer :: densityCoreID, massCoreID, radiusCoreID, radiusSolitonID
-     integer :: tauID, maxTimeID, frequencyCoreID, stepNumID
-     double precision :: alphaCore, alphaOuter
+     double precision                                     :: massParticle
+     class           (darkMatterParticleClass  ), pointer :: darkMatterParticle_   => null()
+     class           (darkMatterProfileDMOClass), pointer :: darkMatterProfileDMO_ => null()
+     integer                                              :: axnCoreID      , aynCoreID , aznCoreID   , &
+                     &                                       axnOuterID     , aynOuterID, aznOuterID  , &
+                     &                                       densityCoreID  , massCoreID, radiusCoreID, &
+                     &                                       radiusSolitonID, tauID     , maxTimeID   , &
+                     &                                       frequencyCoreID, stepNumID
+     double precision                                     :: alphaCore      , alphaOuter
    contains
      final     :: satelliteGranuleDestructor
-     procedure :: acceleration => granuleAcceleration
+     procedure :: acceleration                => granuleAcceleration
      procedure :: nodeTreeInitialize          => satelliteGranuleNodeTreeInitialize
-     procedure :: differentialEvolution => satelliteGranuleDifferentialEvolution
+     procedure :: differentialEvolution       => satelliteGranuleDifferentialEvolution
      procedure :: differentialEvolutionScales => satelliteGranuleDifferentialEvolutionScales
   end type nodeOperatorSatelliteGranule
 
@@ -56,24 +58,24 @@ contains
   function satelliteGranuleConstructorParameters(parameters) result(self)
     use :: Input_Parameters, only : inputParameters
     implicit none
-    type(nodeOperatorSatelliteGranule)          :: self
-    type(inputParameters), intent(inout)        :: parameters
-    class           (darkMatterParticleClass       ), pointer       :: darkMatterParticle_
-    class(darkMatterProfileDMOClass         ), pointer       :: darkMatterProfileDMO_
-    double precision :: alphaCore, alphaOuter
+    type            (nodeOperatorSatelliteGranule)                       :: self
+    type            (inputParameters             ), intent(inout)        :: parameters
+    class           (darkMatterParticleClass     ),              pointer :: darkMatterParticle_
+    class           (darkMatterProfileDMOClass   ),              pointer :: darkMatterProfileDMO_
+    double precision                                                     :: alphaCore            , alphaOuter
   
     !![
     <inputParameter>
       <name>alphaCore</name>
       <defaultValue>5.0d0</defaultValue>
       <source>parameters</source>
-      <description>The fractional scatter in the solitonic core-halo mass relation (default corresponds to a 50\% fractional scatter).</description>
+      <description>Dimensionless scaling factor for the granule-induced acceleration in the solitonic core region..</description>
     </inputParameter>
     <inputParameter>
       <name>alphaOuter</name>
       <defaultValue>0.3d0</defaultValue>
       <source>parameters</source>
-      <description>The fractional scatter in the solitonic core-halo mass relation (default corresponds to a 50\% fractional scatter).</description>
+      <description>Dimensionless scaling factor for the granule-induced acceleration in the outer halo region.</description>
     </inputParameter>
     <objectBuilder class="darkMatterParticle"   name="darkMatterParticle_"   source="parameters"/>
     <objectBuilder class="darkMatterProfileDMO" name="darkMatterProfileDMO_" source="parameters"/>
@@ -86,32 +88,31 @@ contains
     !!]
   end function satelliteGranuleConstructorParameters
 
-
   function satelliteGranuleConstructorInternal(darkMatterParticle_,darkMatterProfileDMO_,alphaCore,alphaOuter) result(self)
     use :: Dark_Matter_Particles         , only : darkMatterParticleFuzzyDarkMatter
     use :: Numerical_Constants_Prefixes  , only : kilo
     implicit none
-    type(nodeOperatorSatelliteGranule)                     :: self
-    class           (darkMatterParticleClass       ), intent(in), target  :: darkMatterParticle_
-    class(darkMatterProfileDMOClass         ), intent(in   ), target :: darkMatterProfileDMO_
-    double precision                                , intent(in)          :: alphaCore, alphaOuter
+    type            (nodeOperatorSatelliteGranule)                     :: self
+    class           (darkMatterParticleClass     ), intent(in), target :: darkMatterParticle_
+    class           (darkMatterProfileDMOClass   ), intent(in), target :: darkMatterProfileDMO_
+    double precision                              , intent(in)         :: alphaCore            , alphaOuter
 
     !![
     <constructorAssign variables="*darkMatterParticle_,*darkMatterProfileDMO_,alphaCore,alphaOuter"/>
-    <addMetaProperty component="basic" name="tau" id="self%tauID" isEvolvable="yes"  isCreator="yes"/>
-    <addMetaProperty component="basic" name="maxTime" id="self%maxTimeID" isEvolvable="no"  isCreator="yes"/>
-    <addMetaProperty component="basic" name="frequencyCore" id="self%frequencyCoreID" isEvolvable="no"  isCreator="yes"/>
-    <addMetaProperty component="basic" name="stepNum"   type="integer" id="self%stepNumID"   isCreator="yes"                 />
-    <addMetaProperty component="basic" name="axnCore"  id="self%axnCoreID"  rank="1" isCreator="yes"/>
-    <addMetaProperty component="basic" name="aynCore"  id="self%aynCoreID"  rank="1" isCreator="yes"/>
-    <addMetaProperty component="basic" name="aznCore"  id="self%aznCoreID"  rank="1" isCreator="yes"/>
-    <addMetaProperty component="basic" name="axnOuter" id="self%axnOuterID" rank="1" isCreator="yes"/>
-    <addMetaProperty component="basic" name="aynOuter" id="self%aynOuterID" rank="1" isCreator="yes"/>
-    <addMetaProperty component="basic" name="aznOuter" id="self%aznOuterID" rank="1" isCreator="yes"/>
-    <addMetaProperty component="darkMatterProfile" name="solitonDensityCore"    id="self%densityCoreID"    isEvolvable="no"  isCreator="no"/>
-    <addMetaProperty component="darkMatterProfile" name="solitonMassCore"       id="self%massCoreID"       isEvolvable="no"  isCreator="no"/>
-    <addMetaProperty component="darkMatterProfile" name="solitonRadiusCore"     id="self%radiusCoreID"     isEvolvable="no"  isCreator="no"/>
-    <addMetaProperty component="darkMatterProfile" name="solitonRadiusSoliton"  id="self%radiusSolitonID"  isEvolvable="no"  isCreator="no"/>
+    <addMetaProperty component="basic"             name="tau"                  id="self%tauID"            isEvolvable="yes" isCreator="yes"/>
+    <addMetaProperty component="basic"             name="maxTime"              id="self%maxTimeID"        isEvolvable="no"  isCreator="yes"/>
+    <addMetaProperty component="basic"             name="frequencyCore"        id="self%frequencyCoreID"  isEvolvable="no"  isCreator="yes"/>
+    <addMetaProperty component="basic"             name="axnCore"              id="self%axnCoreID"        rank="1"          isCreator="yes"/>
+    <addMetaProperty component="basic"             name="aynCore"              id="self%aynCoreID"        rank="1"          isCreator="yes"/>
+    <addMetaProperty component="basic"             name="aznCore"              id="self%aznCoreID"        rank="1"          isCreator="yes"/>
+    <addMetaProperty component="basic"             name="axnOuter"             id="self%axnOuterID"       rank="1"          isCreator="yes"/>
+    <addMetaProperty component="basic"             name="aynOuter"             id="self%aynOuterID"       rank="1"          isCreator="yes"/>
+    <addMetaProperty component="basic"             name="aznOuter"             id="self%aznOuterID"       rank="1"          isCreator="yes"/>
+    <addMetaProperty component="basic"             name="stepNum"              type="integer"         id="self%stepNumID"   isCreator="yes"/>
+    <addMetaProperty component="darkMatterProfile" name="solitonDensityCore"   id="self%densityCoreID"    isEvolvable="no"  isCreator="no" />
+    <addMetaProperty component="darkMatterProfile" name="solitonMassCore"      id="self%massCoreID"       isEvolvable="no"  isCreator="no" />
+    <addMetaProperty component="darkMatterProfile" name="solitonRadiusCore"    id="self%radiusCoreID"     isEvolvable="no"  isCreator="no" />
+    <addMetaProperty component="darkMatterProfile" name="solitonRadiusSoliton" id="self%radiusSolitonID"  isEvolvable="no"  isCreator="no" />
     !!]
 
     select type (darkMatterParticle__ => self%darkMatterParticle_)
@@ -140,20 +141,19 @@ contains
     !!}
     use :: Galacticus_Nodes, only : nodeComponentBasic, nodeComponentSatellite, treeNode
     implicit none
-    class           (nodeOperatorSatelliteGranule), intent(inout) :: self
-    type            (treeNode                            ), intent(inout) :: node
-    class           (nodeComponentBasic        )               , pointer :: basic
-    class           (nodeComponentSatellite    )               , pointer :: satellite
+    class           (nodeOperatorSatelliteGranule), intent(inout)          :: self
+    type            (treeNode                    ), intent(inout)          :: node
+    class           (nodeComponentBasic          )               , pointer :: basic
+    class           (nodeComponentSatellite      )               , pointer :: satellite
 
     if (.not. node%isSatellite()) return
     
     satellite => node%satellite()
-    basic => node%basic()
-    
-    call basic%floatRank0MetaPropertyScale(          &
-         &                               self%tauID, &
-         &                               1.0d0           &
-         &                               )
+    basic     => node%basic    ()
+    call basic%floatRank0MetaPropertyScale(            &
+         &                                 self%tauID, &
+         &                                 1.0d0       &
+         &                                )
     return
   end subroutine satelliteGranuleDifferentialEvolutionScales
 
@@ -197,6 +197,7 @@ contains
     !!}
     use :: Coordinates                     , only : coordinateSpherical      , assignment(=)
     use :: Galacticus_Nodes                , only : nodeComponentBasic            , treeNode
+    use :: Galactic_Structure_Options      , only : componentTypeDarkHalo         , massTypeDark
     use :: Statistics_Distributions         , only : distributionFunction1DNormal
     use :: Mass_Distributions              , only : massDistributionClass    , kinematicsDistributionClass
     implicit none
@@ -205,7 +206,6 @@ contains
     type            (treeNode                         ),                pointer :: nodeHost
     class           (nodeComponentBasic               ),                pointer :: basic, basicHost
     class           (massDistributionClass             ), pointer       :: massDistributionHost_
-    class           (kinematicsDistributionClass       ), pointer       :: kinematicsHost_
     type            (coordinateSpherical                )               :: coordinates
     type (distributionFunction1DNormal)          :: normalCore, normalOuter
     integer :: stepNum
@@ -223,19 +223,22 @@ contains
     maxTime = basicHost%time ()
 
     nodeHost           => node%parent
-    massDistributionHost_ =>  nodeHost             %massDistribution(                    )
-    !massDistributionHost_  =>  self%darkMatterProfileDMO_%get(nodeHost  )
-    kinematicsHost_             =>  massDistributionHost_%kinematicsDistribution(  )
+    !massDistributionHost_        => self             %darkMatterProfileDMO_%get         (                      nodeHost)
+    massDistributionHost_ =>  nodeHost%massDistribution()
+    
     !![
     <objectDestructor name="massDistributionHost_"/>
-    <objectDestructor name="kinematicsHost_"      />
     !!]
     
-    coordinates        = [0.0d0,0.0d0,0.0d0]
-    densityCentral = +massDistributionHost_%density(coordinates)
+    !coordinates        = [0.0d0,0.0d0,0.0d0]
+    !densityCentral = +massDistributionHost_%density(coordinates)
+    densityCentral = 10.0d10
     frequencyCore = 10.94d0*(sqrt(densityCentral)) !Gyr^-1
     stepNum  = ceiling(4.0d0*frequencyCore*maxTime)
     maxTime = stepNum/(4.0d0*frequencyCore)
+
+    stepNum = ceiling(100.0d0)
+    maxTime =14.0d0
     
     basic              => node%basic()
     call basic%floatRank0MetaPropertySet(self%frequencyCoreID ,frequencyCore)
@@ -245,8 +248,14 @@ contains
     normalCore = distributionFunction1DNormal(0.0d0, self%alphaCore**2)
     normalOuter = distributionFunction1DNormal(0.0d0, self%alphaOuter**2)
 
+    allocate(axnCore(0:stepNum))
+    allocate(aynCore(0:stepNum))
+    allocate(aznCore(0:stepNum))
+    allocate(axnOuter(0:stepNum))
+    allocate(aynOuter(0:stepNum))
+    allocate(aznOuter(0:stepNum))
+    
     do i = 0, stepNum
-       ! Warning: ‘axncore.offset’ may be used uninitialized [-Wmaybe-uninitialized]
        axnCore(i) = normalCore%sample(randomNumberGenerator_=node%hostTree%randomNumberGenerator_)
        aynCore(i) = normalCore%sample(randomNumberGenerator_=node%hostTree%randomNumberGenerator_)
        aznCore(i) = normalCore%sample(randomNumberGenerator_=node%hostTree%randomNumberGenerator_)
@@ -273,7 +282,7 @@ contains
     use :: Galacticus_Nodes, only : nodeComponentBasic, nodeComponentSatellite, nodeComponentDarkMatterProfile, treeNode
     use :: Coordinates                     , only : coordinateSpherical      , coordinateCartesian        , assignment(=)
     use :: Error_Functions                 , only : Error_Function
-    use :: Galactic_Structure_Options      , only : coordinateSystemCartesian, componentTypeDarkHalo         , massTypeDark, componentTypeAll, massTypeAll
+    use :: Galactic_Structure_Options      , only : componentTypeDarkHalo         , massTypeDark, componentTypeAll, massTypeAll
     use :: Mass_Distributions              , only : massDistributionClass    , kinematicsDistributionClass
     use :: Numerical_Constants_Astronomical, only : gigaYear                 , gravitationalConstant_internal, megaParsec
     use :: Numerical_Constants_Math        , only : Pi
@@ -331,7 +340,6 @@ contains
     ! massDistribution_           =>  self%darkMatterProfileDMO_%get(node  )
     ! kinematics_                 =>  massDistribution_ %kinematicsDistribution(   )
     
-
     massDistribution_ => node%massDistribution(componentType=componentTypeDarkHalo, massType=massTypeDark)
     massDistributionTotal_   => node%massDistribution(componentType=componentTypeAll,       massType=massTypeAll)
     kinematics_                 =>  massDistribution_ %kinematicsDistribution(   )
